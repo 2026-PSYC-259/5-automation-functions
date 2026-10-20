@@ -486,6 +486,17 @@ mpg_lm <- function(criterion, predictor) {
 # Use map2_dfr to provide two inputs and combine results into a dataframe
 map2_dfr(all_combos$Var1, all_combos$Var2, mpg_lm)
 ```
+---
+# Split data to apply function to each subset
+```{r}
+ds <- starwars %>% filter(species %in% c("Human", "Droid", "Gungan")) %>% mutate(species = factor(species)) %>% drop_na(height, mass)
+height_mass_cor <- function(df) tibble(height_mass_cor = cor(df$height, df$mass))
+height_mass_cor(ds)
+split_ds <- split(ds, ds$species) #base R
+map_dfr(split_ds, height_mass_cor) %>% add_column(species = names(split_ds))
+```
+
+
 
 
 <!-- adjust font size and other formatting defs in this css code chunk -->

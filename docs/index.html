@@ -54,7 +54,7 @@ class: center, middle, inverse, title-slide
 
 ``` r
 # Tedious thing 1
-summarize(m_a = mean(a), m_b = mean(b), m_c = mean(c), m_d = mean(d))
+ds %&gt;% summarize(m_a = mean(a), m_b = mean(b), m_c = mean(c), m_d = mean(d))
 
 # Tedious thing 2
 ds_a &lt;- read_csv(“data_a.csv”)
@@ -63,10 +63,24 @@ ds_c &lt;- read_csv(“data_b.csv”) #oops
 ```
 
 ---
+
+``` r
+# Tedious thing 1
+ds %&gt;% summarize(m_a = mean(a), m_b = mean(b), m_c = mean(c), m_d = mean(d))
+ds %&gt;% summarize(across(a:d), mean)
+
+# Tedious thing 2
+ds_a &lt;- read_csv(“data_a.csv”)
+ds_b &lt;- read_csv(“data_b.csv”)
+ds_c &lt;- read_csv(“data_b.csv”) #oops
+ds &lt;- read_csv(str_glue("data_{c('a','b','c')}.csv"))
+```
+
+---
 # Today's tutorial
 
 - Ways to make coding more efficient
-  * Defining reusable functions
+  * Understanding and creating functions
   * Mutating and summarizing *across* columns
   * Repeating operations using for loops
   * Repeating operations using *map*
@@ -212,6 +226,7 @@ if (x == 0) {
 ```
 [1] "-1 is negative"
 ```
+
 ---
 # Write "wrapper functions" to make your life easier
 
@@ -307,7 +322,7 @@ starwars %&gt;% group_by(species) %&gt;% avg_height_mass
 # Some types of automation are built-in
 - *Vectorized* operations (like adding values between two columns) operate on every element simultaneously (you don't have to perform the operation on every row)
 
-- `rename_all()`, `rename_with()` and `make_clean_names()` operate on multiple columns
+- `rename_all()`, `rename_with()` and `clean_names()` operate on multiple columns
 
 - `mutate()` and `summarize()` can operate on selections of columns with `across()`
   * `across(selection_statement, fx_to_apply)`
@@ -406,39 +421,6 @@ ds &lt;- starwars %&gt;% select(-where(is.list))
  8 R5-D4        97    32 &lt;NA&gt;       white, red red             NA   none  mascu…
  9 Biggs D…    183    84 black      light      brown           24   male  mascu…
 10 Obi-Wan…    182    77 auburn, w… fair       blue-gray       57   male  mascu…
-# ℹ 77 more rows
-# ℹ 2 more variables: homeworld &lt;chr&gt;, species &lt;chr&gt;
-```
-]
-
----
-count: false
- 
-# Mutate across()
-.panel1-mutate_across-rotate[
-
-``` r
-ds &lt;- starwars %&gt;% select(-where(is.list))
-*ds %&gt;% mutate(across(where(is.numeric), round))
-```
-]
- 
-.panel2-mutate_across-rotate[
-
-```
-# A tibble: 87 × 11
-   name     height  mass hair_color skin_color eye_color birth_year sex   gender
-   &lt;chr&gt;     &lt;dbl&gt; &lt;dbl&gt; &lt;chr&gt;      &lt;chr&gt;      &lt;chr&gt;          &lt;dbl&gt; &lt;chr&gt; &lt;chr&gt; 
- 1 Luke Sk…    172    77 blond      fair       blue              19 male  mascu…
- 2 C-3PO       167    75 &lt;NA&gt;       gold       yellow           112 none  mascu…
- 3 R2-D2        96    32 &lt;NA&gt;       white, bl… red               33 none  mascu…
- 4 Darth V…    202   136 none       white      yellow            42 male  mascu…
- 5 Leia Or…    150    49 brown      light      brown             19 fema… femin…
- 6 Owen La…    178   120 brown, gr… light      blue              52 male  mascu…
- 7 Beru Wh…    165    75 brown      light      blue              47 fema… femin…
- 8 R5-D4        97    32 &lt;NA&gt;       white, red red               NA none  mascu…
- 9 Biggs D…    183    84 black      light      brown             24 male  mascu…
-10 Obi-Wan…    182    77 auburn, w… fair       blue-gray         57 male  mascu…
 # ℹ 77 more rows
 # ℹ 2 more variables: homeworld &lt;chr&gt;, species &lt;chr&gt;
 ```
@@ -710,7 +692,7 @@ fx_list &lt;- list(mean = mean_na, sd = sd_na, se = se_na)
 
 
 ---
-# Across() uses `str_glue` syntax helpers
+# across() uses `str_glue` syntax helpers
 ```
 ds %&gt;% summarize(across(where(is.numeric), fx_list, .names = "{.fn}_{.col}"))
 ```
@@ -1260,8 +1242,8 @@ mpg_lm &lt;- function(p) {
   res$call &lt;- f
   return(res)
 }
-results &lt;- map(predictors, mpg_lm)
-map(results, summary)
+results &lt;- map(predictors, mpg_lm) # returns list of model results
+map(results, summary) # runs summary on each item in the list
 ```
 
 ```
@@ -2092,7 +2074,7 @@ mpg_lm &lt;- function(criterion, predictor) {
   res &lt;- tidy(res) %&gt;% mutate(criterion = criterion, predictor = predictor, .before = 1)
   return(res)
 }
-# Use map2 to provide two inputs
+# Use map2_dfr to provide two inputs and combine results into a dataframe
 map2_dfr(all_combos$Var1, all_combos$Var2, mpg_lm)
 ```
 
@@ -2112,6 +2094,37 @@ map2_dfr(all_combos$Var1, all_combos$Var2, mpg_lm)
 10 qsec      cyl       cyl           -0.592    0.147      -4.02 3.66e- 4
 # ℹ 50 more rows
 ```
+---
+# Split data to apply function to each subset
+
+``` r
+ds &lt;- starwars %&gt;% filter(species %in% c("Human", "Droid", "Gungan")) %&gt;% mutate(species = factor(species)) %&gt;% drop_na(height, mass)
+height_mass_cor &lt;- function(df) tibble(height_mass_cor = cor(df$height, df$mass))
+height_mass_cor(ds)
+```
+
+```
+# A tibble: 1 × 1
+  height_mass_cor
+            &lt;dbl&gt;
+1           0.661
+```
+
+``` r
+split_ds &lt;- split(ds, ds$species) #base R
+map_dfr(split_ds, height_mass_cor) %&gt;% add_column(species = names(split_ds))
+```
+
+```
+# A tibble: 3 × 2
+  height_mass_cor species
+            &lt;dbl&gt; &lt;chr&gt;  
+1           0.960 Droid  
+2           1     Gungan 
+3           0.536 Human  
+```
+
+
 
 
 &lt;!-- adjust font size and other formatting defs in this css code chunk --&gt;
