@@ -92,6 +92,10 @@ ds &lt;- read_csv(str_glue("data_{c('a','b','c')}.csv"))
 .footnote[.small[.bold[Last updated: 2026-10-20]]]
 
 ---
+class: inverse, center, middle
+# Part 1: Functions
+
+---
 # Functions extend and customize a programming language
 
 - R packages aren't anything more than sets of functions that you load using `library()`
@@ -317,6 +321,10 @@ starwars %&gt;% group_by(species) %&gt;% avg_height_mass
 - Introduce abstraction
   * Breaks up your code into conceptual chunks
   * Increases the possibility of reuse (and spend more time debugging things that will be reused)
+
+---
+class: inverse, center, middle
+# Part 2: Automation with across
 
 ---
 # Some types of automation are built-in
@@ -740,6 +748,10 @@ ds %&gt;% group_by(species) %&gt;% filter(n() &gt; 1) %&gt;% summary_stats(c("he
 8 Zabrak       173       2.83   80     NA   
 9 &lt;NA&gt;         175      12.4    81     31.2 
 ```
+
+---
+class: inverse, center, middle
+# Part 3: Iteration with for loops and map
 
 ---
 
@@ -2098,30 +2110,43 @@ map2_dfr(all_combos$Var1, all_combos$Var2, mpg_lm)
 # Split data to apply function to each subset
 
 ``` r
-ds &lt;- starwars %&gt;% filter(species %in% c("Human", "Droid", "Gungan")) %&gt;% mutate(species = factor(species)) %&gt;% drop_na(height, mass)
-height_mass_cor &lt;- function(df) tibble(height_mass_cor = cor(df$height, df$mass))
-height_mass_cor(ds)
+ds &lt;- starwars %&gt;% mutate(species = factor(
+    ifelse(species %in% c("Human", "Droid"), species, "Other")))
+
+height_mass_lm &lt;- function(df) {
+  df %&gt;% drop_na(height, mass) %&gt;% 
+    lm(mass ~ height, data = .) %&gt;% 
+    tidy %&gt;% mutate(species = df$species[1], .before = 1)}
+
+split_ds &lt;- split(ds, ds$species) #base R fx
+map_dfr(split_ds, height_mass_lm)
 ```
 
 ```
-# A tibble: 1 × 1
-  height_mass_cor
-            &lt;dbl&gt;
-1           0.661
+# A tibble: 6 × 6
+  species term        estimate std.error statistic p.value
+  &lt;fct&gt;   &lt;chr&gt;          &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt;   &lt;dbl&gt;
+1 Droid   (Intercept)  -62.1      28.7     -2.16    0.163 
+2 Droid   height         0.942     0.195    4.83    0.0403
+3 Human   (Intercept)  -81.8      60.6     -1.35    0.194 
+4 Human   height         0.905     0.336    2.70    0.0148
+5 Other   (Intercept)    6.68    166.       0.0402  0.968 
+6 Other   height         0.588     0.926    0.636   0.529 
 ```
+
+---
+# Split data and write subset to file
 
 ``` r
-split_ds &lt;- split(ds, ds$species) #base R
-map_dfr(split_ds, height_mass_cor) %&gt;% add_column(species = names(split_ds))
-```
+ds &lt;- starwars %&gt;% mutate(species = factor(
+    ifelse(species %in% c("Human", "Droid"), species, "Other")))
 
-```
-# A tibble: 3 × 2
-  height_mass_cor species
-            &lt;dbl&gt; &lt;chr&gt;  
-1           0.960 Droid  
-2           1     Gungan 
-3           0.536 Human  
+write_species &lt;- function(df) {
+  fname &lt;- str_glue("data_species/{df$species[1]}.csv")
+  df %&gt;% write_csv(file = fname) }
+
+split_ds &lt;- split(ds, ds$species) 
+walk(split_ds, write_species) #Walk is map w/o returning data
 ```
 
 

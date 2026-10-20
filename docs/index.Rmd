@@ -109,6 +109,10 @@ ds <- read_csv(str_glue("data_{c('a','b','c')}.csv"))
 .footnote[.small[.bold[Last updated: `r Sys.Date()`]]]
 
 ---
+class: inverse, center, middle
+# Part 1: Functions
+
+---
 # Functions extend and customize a programming language
 
 - R packages aren't anything more than sets of functions that you load using `library()`
@@ -249,6 +253,10 @@ starwars %>% group_by(species) %>% avg_height_mass
   * Increases the possibility of reuse (and spend more time debugging things that will be reused)
 
 ---
+class: inverse, center, middle
+# Part 2: Automation with across
+
+---
 # Some types of automation are built-in
 - *Vectorized* operations (like adding values between two columns) operate on every element simultaneously (you don't have to perform the operation on every row)
 
@@ -313,6 +321,10 @@ summary_stats <- function(df, var_select_string) {
 ds %>% summary_stats("height")
 ds %>% group_by(species) %>% filter(n() > 1) %>% summary_stats(c("height","mass"))
 ```
+
+---
+class: inverse, center, middle
+# Part 3: Iteration with for loops and map
 
 ---
 
@@ -489,11 +501,30 @@ map2_dfr(all_combos$Var1, all_combos$Var2, mpg_lm)
 ---
 # Split data to apply function to each subset
 ```{r}
-ds <- starwars %>% filter(species %in% c("Human", "Droid", "Gungan")) %>% mutate(species = factor(species)) %>% drop_na(height, mass)
-height_mass_cor <- function(df) tibble(height_mass_cor = cor(df$height, df$mass))
-height_mass_cor(ds)
-split_ds <- split(ds, ds$species) #base R
-map_dfr(split_ds, height_mass_cor) %>% add_column(species = names(split_ds))
+ds <- starwars %>% mutate(species = factor(
+    ifelse(species %in% c("Human", "Droid"), species, "Other")))
+
+height_mass_lm <- function(df) {
+  df %>% drop_na(height, mass) %>% 
+    lm(mass ~ height, data = .) %>% 
+    tidy %>% mutate(species = df$species[1], .before = 1)}
+
+split_ds <- split(ds, ds$species) #base R fx
+map_dfr(split_ds, height_mass_lm)
+```
+
+---
+# Split data and write subset to file
+```{r, eval = F}
+ds <- starwars %>% mutate(species = factor(
+    ifelse(species %in% c("Human", "Droid"), species, "Other")))
+
+write_species <- function(df) {
+  fname <- str_glue("data_species/{df$species[1]}.csv")
+  df %>% write_csv(file = fname) }
+
+split_ds <- split(ds, ds$species) 
+walk(split_ds, write_species) #Walk is map w/o returning data
 ```
 
 
