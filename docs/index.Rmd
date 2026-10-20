@@ -72,7 +72,7 @@ library(icons) #https://fontawesome.com/v5.15/icons?d=gallery&p=2&m=free
 
 ```{r, eval=F} 
 # Tedious thing 1
-summarize(m_a = mean(a), m_b = mean(b), m_c = mean(c), m_d = mean(d))
+ds %>% summarize(m_a = mean(a), m_b = mean(b), m_c = mean(c), m_d = mean(d))
 
 # Tedious thing 2
 ds_a <- read_csv(“data_a.csv”)
@@ -81,10 +81,23 @@ ds_c <- read_csv(“data_b.csv”) #oops
 ```
 
 ---
+```{r, eval=F} 
+# Tedious thing 1
+ds %>% summarize(m_a = mean(a), m_b = mean(b), m_c = mean(c), m_d = mean(d))
+ds %>% summarize(across(a:d), mean)
+
+# Tedious thing 2
+ds_a <- read_csv(“data_a.csv”)
+ds_b <- read_csv(“data_b.csv”)
+ds_c <- read_csv(“data_b.csv”) #oops
+ds <- read_csv(str_glue("data_{c('a','b','c')}.csv"))
+```
+
+---
 # Today's tutorial
 
 - Ways to make coding more efficient
-  * Defining reusable functions
+  * Understanding and creating functions
   * Mutating and summarizing *across* columns
   * Repeating operations using for loops
   * Repeating operations using *map*
@@ -184,6 +197,7 @@ if (x == 0) {
   paste(x, "is positive")
 } 
 ```
+
 ---
 # Write "wrapper functions" to make your life easier
 
@@ -238,7 +252,7 @@ starwars %>% group_by(species) %>% avg_height_mass
 # Some types of automation are built-in
 - *Vectorized* operations (like adding values between two columns) operate on every element simultaneously (you don't have to perform the operation on every row)
 
-- `rename_all()`, `rename_with()` and `make_clean_names()` operate on multiple columns
+- `rename_all()`, `rename_with()` and `clean_names()` operate on multiple columns
 
 - `mutate()` and `summarize()` can operate on selections of columns with `across()`
   * `across(selection_statement, fx_to_apply)`
@@ -251,7 +265,6 @@ ds <- starwars %>% select(-where(is.list))
 ds #ROTATE
 ds %>% mutate(across(everything(), as.character)) #ROTATE
 ds %>% mutate(across(c("height", "mass"), round)) #ROTATE
-ds %>% mutate(across(where(is.numeric), round)) #ROTATE
 ds %>% mutate(across(where(is.numeric), round, .names = "{.col}_rounded"), .after = name) #ROTATE
 ds %>% mutate(across(where(is.numeric), ~ .x *100)) #ROTATE
 ds %>% mutate(across(ends_with("color"), ~ str_remove_all(.x, "[:punct:]"))) #ROTATE
@@ -278,7 +291,7 @@ ds %>% summarize(across(where(is.numeric), fx_list, .names = "{.fn}_{.col}")) #R
 ```
 
 ---
-# Across() uses `str_glue` syntax helpers
+# across() uses `str_glue` syntax helpers
 ```
 ds %>% summarize(across(where(is.numeric), fx_list, .names = "{.fn}_{.col}"))
 ```
@@ -433,8 +446,8 @@ mpg_lm <- function(p) {
   res$call <- f
   return(res)
 }
-results <- map(predictors, mpg_lm)
-map(results, summary)
+results <- map(predictors, mpg_lm) # returns list of model results
+map(results, summary) # runs summary on each item in the list
 ```
 
 ---
@@ -470,7 +483,7 @@ mpg_lm <- function(criterion, predictor) {
   res <- tidy(res) %>% mutate(criterion = criterion, predictor = predictor, .before = 1)
   return(res)
 }
-# Use map2 to provide two inputs
+# Use map2_dfr to provide two inputs and combine results into a dataframe
 map2_dfr(all_combos$Var1, all_combos$Var2, mpg_lm)
 ```
 
