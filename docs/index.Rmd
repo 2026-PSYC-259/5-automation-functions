@@ -113,6 +113,32 @@ class: inverse, center, middle
 # Part 1: Functions
 
 ---
+# What is a function?
+
+- Anything in R that you call with `function_name()`
+- A function does three main things:
+1. Takes input arguments (or reads input data from the current environment)
+2. Runs code on those arguments/data
+3. Returns some output
+
+---
+# Defining a simple function
+- The keyword `function()` tells R to create a function
+- Functions have to be assigned to a name (just like anything else)
+- Input arguments go inside the parentheses
+- Everything between the curly braces runs when you call the function
+- `return()` tells the function what to output
+```{r}
+say_hello <- function(input_name) {
+  hello_output <- str_glue("Hello, {input_name}!")
+  return(hello_output)
+}
+say_hello(input_name = "class")
+hello_world <- say_hello("world!")
+print(hello_world)
+```
+
+---
 # Functions extend and customize a programming language
 
 - R packages aren't anything more than sets of functions that you load using `library()`
@@ -123,10 +149,9 @@ class: inverse, center, middle
 - You can also write your own functions that you load for a project to make repetitive operations easier
 
 ---
-# Defining a function
+# Defining a function with multiple arguments
 
-- A function is assigned just like any other variable and will appear in the environment
-- Input *arguments* go in parentheses, and the function body is contained in curly brackets
+- Named input *arguments* go in parentheses
 - The function returns the last computed value or the value listed by the `return()` function
 - Be sure to highlight and run the entire function to assign it
 
